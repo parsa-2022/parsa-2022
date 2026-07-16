@@ -1,5 +1,5 @@
 /* ====================================
-   WORLD STRATEGY v0.1.1 - Game Engine
+   WORLD STRATEGY v0.1.2 - Game Engine
    ==================================== */
 
 class GameEngine {
@@ -21,20 +21,24 @@ class GameEngine {
 
     resizeCanvas() {
         const rect = this.canvas.getBoundingClientRect();
-        this.canvas.width = rect.width * window.devicePixelRatio;
-        this.canvas.height = rect.height * window.devicePixelRatio;
-        this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
     }
 
     setupCamera() {
         this.camera = {
-            x: 2500,           // Start at middle of world
+            x: 2500,           // Center of world
             y: 2500,
-            zoom: 1,
+            zoom: 0.8,
             minZoom: 0.3,
             maxZoom: 4,
-            targetZoom: 1,
-            zoomSpeed: 0.15    // Smooth zoom transition
+            targetZoom: 0.8,
+            zoomSpeed: 0.12,
+            panX: 0,           // Smooth panning
+            panY: 0,
+            targetPanX: 0,
+            targetPanY: 0,
+            panSpeed: 0.15
         };
     }
 
@@ -44,15 +48,14 @@ class GameEngine {
             dragStartX: 0,
             dragStartY: 0,
             lastX: 0,
-            lastY: 0,
-            panSpeed: 1
+            lastY: 0
         };
 
-        // Mouse Events
         this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
         this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
         this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
         this.canvas.addEventListener('wheel', (e) => this.onMouseWheel(e), { passive: false });
+        this.canvas.addEventListener('click', (e) => this.onClick(e));
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     }
 
@@ -60,7 +63,8 @@ class GameEngine {
         this.gameState = {
             money: 50000,
             oil: 10000,
-            population: 1000000
+            population: 1000000,
+            selectedPos: null
         };
 
         this.world = {
@@ -69,14 +73,29 @@ class GameEngine {
             gridSize: 50
         };
 
+        // Continents
+        this.continents = this.generateContinents();
+
         // Performance
         this.fps = 0;
         this.frameCount = 0;
         this.lastTime = Date.now();
     }
 
+    generateContinents() {
+        return [
+            { x: 800, y: 800, width: 700, height: 500, color: '#2d5016', name: 'Northern Continent' },
+            { x: 2000, y: 2800, width: 800, height: 600, color: '#3d6b1f', name: 'Southern Continent' },
+            { x: 3800, y: 1200, width: 600, height: 900, color: '#2d5016', name: 'Eastern Continent' },
+            { x: 400, y: 2000, width: 500, height: 700, color: '#3d6b1f', name: 'Western Continent' },
+            // Islands
+            { x: 1500, y: 500, width: 200, height: 150, color: '#2d5016', name: 'Island 1' },
+            { x: 3200, y: 4000, width: 250, height: 180, color: '#2d5016', name: 'Island 2' }
+        ];
+    }
+
     init() {
-        console.log('🎮 WORLD STRATEGY v0.1.1 Engine Initializing...');
+        console.log('🎮 WORLD STRATEGY v0.1.2 Engine Initializing...');
         this.setupMenuButtons();
         this.startGameLoop();
         console.log('✅ Engine Ready!');
@@ -108,11 +127,11 @@ class GameEngine {
             const deltaX = (e.clientX - this.input.lastX) / this.camera.zoom;
             const deltaY = (e.clientY - this.input.lastY) / this.camera.zoom;
 
-            this.camera.x -= deltaX;
-            this.camera.y -= deltaY;
-
             this.input.lastX = e.clientX;
             this.input.lastY = e.clientY;
+
+            this.camera.targetPanX -= deltaX;
+            this.camera.targetPanY -= deltaY;
         }
     }
 
@@ -124,15 +143,26 @@ class GameEngine {
 
     onMouseWheel(e) {
         e.preventDefault();
-
         const zoomSpeed = 0.08;
         const direction = e.deltaY > 0 ? -1 : 1;
         this.camera.targetZoom += direction * zoomSpeed;
-
         this.camera.targetZoom = Math.max(
             this.camera.minZoom,
             Math.min(this.camera.maxZoom, this.camera.targetZoom)
         );
+    }
+
+    onClick(e) {
+        // Convert screen coordinates to world coordinates
+        const rect = this.canvas.getBoundingClientRect();
+        const screenX = e.clientX - rect.left;
+        const screenY = e.clientY - rect.top;
+
+        const worldX = (screenX - this.canvas.width / 2) / this.camera.zoom + this.camera.x;
+        const worldY = (screenY - this.canvas.height / 2) / this.camera.zoom + this.camera.y;
+
+        this.gameState.selectedPos = { x: worldX, y: worldY };
+        console.log(`🎯 Clicked at: ${Math.round(worldX)}, ${Math.round(worldY)}`);
     }
 
     // ==================== GAME LOOP ====================
@@ -158,14 +188,21 @@ class GameEngine {
             this.lastTime = now;
         }
 
-        // Smooth zoom transition
+        // Smooth camera transitions
         this.camera.zoom += (this.camera.targetZoom - this.camera.zoom) * this.camera.zoomSpeed;
+        this.camera.panX += (this.camera.targetPanX - this.camera.panX) * this.camera.panSpeed;
+        this.camera.panY += (this.camera.targetPanY - this.camera.panY) * this.camera.panSpeed;
 
-        // Clamp camera position to world bounds
-        this.camera.x = Math.max(0, Math.min(this.camera.x, this.world.width));
-        this.camera.y = Math.max(0, Math.min(this.camera.y, this.world.height));
+        this.camera.x = this.camera.panX;
+        this.camera.y = this.camera.panY;
 
-        // Update UI
+        // Clamp camera to world bounds with padding
+        const padding = 500;
+        this.camera.x = Math.max(-padding, Math.min(this.camera.x, this.world.width + padding));
+        this.camera.y = Math.max(-padding, Math.min(this.camera.y, this.world.height + padding));
+        this.camera.panX = this.camera.x;
+        this.camera.panY = this.camera.y;
+
         this.updateUI();
     }
 
@@ -174,123 +211,201 @@ class GameEngine {
         document.getElementById('oil').textContent = this.gameState.oil.toLocaleString();
         document.getElementById('population').textContent = this.gameState.population.toLocaleString();
 
-        const debugText = `FPS: ${this.fps} | X: ${Math.round(this.camera.x)} Y: ${Math.round(this.camera.y)} | Zoom: ${this.camera.zoom.toFixed(2)}x`;
+        const selectedText = this.gameState.selectedPos 
+            ? `Selected: ${Math.round(this.gameState.selectedPos.x)}, ${Math.round(this.gameState.selectedPos.y)}`
+            : 'Click map to select';
+
+        const debugText = `FPS: ${this.fps} | X: ${Math.round(this.camera.x)} Y: ${Math.round(this.camera.y)} | Zoom: ${this.camera.zoom.toFixed(2)}x | ${selectedText}`;
         document.getElementById('debug-text').textContent = debugText;
     }
 
     // ==================== RENDER ====================
     render() {
-        // Clear canvas with background color
-        this.drawBackground();
+        // Clear canvas
+        this.ctx.fillStyle = '#0a2540';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Save context state
+        // Save context
         this.ctx.save();
 
-        // Get canvas dimensions
-        const width = this.canvas.width / window.devicePixelRatio;
-        const height = this.canvas.height / window.devicePixelRatio;
-
         // Apply camera transformation
-        this.ctx.translate(width / 2, height / 2);
+        this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
         this.ctx.scale(this.camera.zoom, this.camera.zoom);
         this.ctx.translate(-this.camera.x, -this.camera.y);
 
-        // Draw world grid
+        // Draw world
+        this.drawBackground();
+        this.drawContinents();
         this.drawGrid();
+        this.drawSelectedPos();
 
         // Restore context
         this.ctx.restore();
     }
 
     // ==================== DRAWING FUNCTIONS ====================
-    /**
-     * Draw background - fills entire screen
-     */
     drawBackground() {
-        const width = this.canvas.width / window.devicePixelRatio;
-        const height = this.canvas.height / window.devicePixelRatio;
-        
-        this.ctx.fillStyle = '#0a2540';
-        this.ctx.fillRect(0, 0, width, height);
+        // Ocean
+        this.ctx.fillStyle = '#0a3a5c';
+        this.ctx.fillRect(0, 0, this.world.width, this.world.height);
+
+        // Subtle ocean gradient
+        const gradient = this.ctx.createLinearGradient(0, 0, this.world.width, this.world.height);
+        gradient.addColorStop(0, 'rgba(10, 58, 92, 0)');
+        gradient.addColorStop(0.5, 'rgba(15, 52, 96, 0.15)');
+        gradient.addColorStop(1, 'rgba(10, 58, 92, 0)');
+        this.ctx.fillStyle = gradient;
+        this.ctx.fillRect(0, 0, this.world.width, this.world.height);
     }
 
-    /**
-     * Draw strategic grid that moves with camera
-     */
+    drawContinents() {
+        this.continents.forEach(continent => {
+            // Main land mass
+            this.ctx.fillStyle = continent.color;
+            this.ctx.fillRect(
+                continent.x,
+                continent.y,
+                continent.width,
+                continent.height
+            );
+
+            // Border
+            this.ctx.strokeStyle = '#1a3d0a';
+            this.ctx.lineWidth = 2;
+            this.ctx.strokeRect(
+                continent.x,
+                continent.y,
+                continent.width,
+                continent.height
+            );
+
+            // Terrain variation (darker shades)
+            this.ctx.fillStyle = this.shadeColor(continent.color, 20);
+            this.ctx.beginPath();
+            this.ctx.arc(
+                continent.x + continent.width * 0.3,
+                continent.y + continent.height * 0.3,
+                Math.min(continent.width, continent.height) * 0.15,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.fill();
+
+            this.ctx.beginPath();
+            this.ctx.arc(
+                continent.x + continent.width * 0.7,
+                continent.y + continent.height * 0.7,
+                Math.min(continent.width, continent.height) * 0.12,
+                0,
+                Math.PI * 2
+            );
+            this.ctx.fill();
+        });
+    }
+
+    shadeColor(color, percent) {
+        let num = parseInt(color.replace("#", ""), 16);
+        let amt = Math.round(2.55 * percent);
+        let R = Math.min(255, (num >> 16) - amt);
+        let G = Math.min(255, (num >> 8 & 0x00FF) - amt);
+        let B = Math.min(255, (num & 0x0000FF) - amt);
+        return "#" + (0x1000000 + (R < 0 ? 0 : R) * 0x10000 +
+            (G < 0 ? 0 : G) * 0x100 + (B < 0 ? 0 : B))
+            .toString(16).slice(1);
+    }
+
     drawGrid() {
-        // Calculate visible grid bounds
         const gridSpacing = this.world.gridSize;
         const startX = Math.floor(this.camera.x / gridSpacing) * gridSpacing;
         const startY = Math.floor(this.camera.y / gridSpacing) * gridSpacing;
 
-        // Grid line styling
-        this.ctx.strokeStyle = 'rgba(0, 212, 255, 0.15)';
+        // Grid styling
+        this.ctx.strokeStyle = 'rgba(0, 212, 255, 0.1)';
         this.ctx.lineWidth = 1;
 
-        const width = this.canvas.width / window.devicePixelRatio / this.camera.zoom;
-        const height = this.canvas.height / window.devicePixelRatio / this.camera.zoom;
+        const visibleWidth = this.canvas.width / this.camera.zoom;
+        const visibleHeight = this.canvas.height / this.camera.zoom;
 
-        // Draw vertical grid lines
-        for (let x = startX; x < this.camera.x + width; x += gridSpacing) {
+        // Vertical lines
+        for (let x = startX; x < this.camera.x + visibleWidth; x += gridSpacing) {
             if (x >= 0 && x <= this.world.width) {
                 this.ctx.beginPath();
-                this.ctx.moveTo(x, this.camera.y - height / 2);
-                this.ctx.lineTo(x, this.camera.y + height / 2);
+                this.ctx.moveTo(x, this.camera.y - visibleHeight);
+                this.ctx.lineTo(x, this.camera.y + visibleHeight);
                 this.ctx.stroke();
             }
         }
 
-        // Draw horizontal grid lines
-        for (let y = startY; y < this.camera.y + height; y += gridSpacing) {
+        // Horizontal lines
+        for (let y = startY; y < this.camera.y + visibleHeight; y += gridSpacing) {
             if (y >= 0 && y <= this.world.height) {
                 this.ctx.beginPath();
-                this.ctx.moveTo(this.camera.x - width / 2, y);
-                this.ctx.lineTo(this.camera.x + width / 2, y);
+                this.ctx.moveTo(this.camera.x - visibleWidth, y);
+                this.ctx.lineTo(this.camera.x + visibleWidth, y);
                 this.ctx.stroke();
             }
         }
 
-        // Draw grid coordinate labels when zoomed in
-        if (this.camera.zoom >= 0.8) {
+        // Grid labels when zoomed in
+        if (this.camera.zoom >= 1.2) {
             this.drawGridLabels(startX, startY, gridSpacing);
         }
 
-        // Draw world border
-        this.drawWorldBorder();
+        // World border
+        this.ctx.strokeStyle = 'rgba(0, 212, 255, 0.4)';
+        this.ctx.lineWidth = 3;
+        this.ctx.strokeRect(0, 0, this.world.width, this.world.height);
     }
 
-    /**
-     * Draw coordinate labels on grid
-     */
     drawGridLabels(startX, startY, gridSpacing) {
-        this.ctx.fillStyle = 'rgba(0, 212, 255, 0.4)';
-        this.ctx.font = '10px monospace';
+        this.ctx.fillStyle = 'rgba(0, 212, 255, 0.3)';
+        this.ctx.font = '11px monospace';
         this.ctx.textAlign = 'left';
 
-        for (let x = startX; x <= this.camera.x + 2000; x += gridSpacing * 2) {
-            for (let y = startY; y <= this.camera.y + 2000; y += gridSpacing * 2) {
+        for (let x = startX; x <= this.camera.x + 2000; x += gridSpacing * 3) {
+            for (let y = startY; y <= this.camera.y + 2000; y += gridSpacing * 3) {
                 if (x >= 0 && x <= this.world.width && y >= 0 && y <= this.world.height) {
                     const gridX = Math.floor(x / gridSpacing);
                     const gridY = Math.floor(y / gridSpacing);
-                    this.ctx.fillText(`${gridX},${gridY}`, x + 3, y + 12);
+                    this.ctx.fillText(`${gridX},${gridY}`, x + 5, y + 15);
                 }
             }
         }
     }
 
-    /**
-     * Draw world border
-     */
-    drawWorldBorder() {
-        this.ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeRect(0, 0, this.world.width, this.world.height);
+    drawSelectedPos() {
+        if (this.gameState.selectedPos) {
+            const pos = this.gameState.selectedPos;
+            
+            // Draw circle marker
+            this.ctx.fillStyle = 'rgba(255, 200, 0, 0.3)';
+            this.ctx.beginPath();
+            this.ctx.arc(pos.x, pos.y, 80, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            // Draw border
+            this.ctx.strokeStyle = '#ffc800';
+            this.ctx.lineWidth = 2;
+            this.ctx.beginPath();
+            this.ctx.arc(pos.x, pos.y, 80, 0, Math.PI * 2);
+            this.ctx.stroke();
+
+            // Draw crosshair
+            this.ctx.strokeStyle = '#ffc800';
+            this.ctx.lineWidth = 1;
+            this.ctx.beginPath();
+            this.ctx.moveTo(pos.x - 50, pos.y);
+            this.ctx.lineTo(pos.x + 50, pos.y);
+            this.ctx.moveTo(pos.x, pos.y - 50);
+            this.ctx.lineTo(pos.x, pos.y + 50);
+            this.ctx.stroke();
+        }
     }
 }
 
 // ==================== START GAME ====================
 document.addEventListener('DOMContentLoaded', () => {
     const game = new GameEngine();
-    window.game = game; // For debugging in console
-    console.log('💡 Tip: Use window.game to access the engine in console');
+    window.game = game;
+    console.log('💡 Commands: Right-click+drag to pan, scroll to zoom, click to select');
 });
