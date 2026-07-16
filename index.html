@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WORLD STRATEGY v0.1</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Game Container -->
+    <div id="game-container">
+        <!-- Top Resource Bar -->
+        <div class="top-bar">
+            <div class="game-title">WORLD STRATEGY v0.1</div>
+            <div class="resources">
+                <div class="resource">
+                    <span class="label">💰 Money:</span>
+                    <span class="value" id="money">50000</span>
+                </div>
+                <div class="resource">
+                    <span class="label">🛢️ Oil:</span>
+                    <span class="value" id="oil">10000</span>
+                </div>
+                <div class="resource">
+                    <span class="label">👥 Population:</span>
+                    <span class="value" id="population">1000000</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Left Side Menu -->
+        <div class="side-menu">
+            <div class="menu-title">MENU</div>
+            <button class="menu-btn" data-action="build">🏗️ Build</button>
+            <button class="menu-btn" data-action="army">⚔️ Army</button>
+            <button class="menu-btn" data-action="economy">💵 Economy</button>
+            <button class="menu-btn" data-action="diplomacy">🤝 Diplomacy</button>
+            <button class="menu-btn" data-action="research">🔬 Research</button>
+        </div>
+
+        <!-- Canvas for Game -->
+        <canvas id="game-canvas"></canvas>
+
+        <!-- Debug Info -->
+        <div class="debug-info">
+            <div id="debug-text">FPS: 0 | X: 0 Y: 0 | Zoom: 1.0x</div>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
