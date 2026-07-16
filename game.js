@@ -1,81 +1,85 @@
 /* ====================================
-   WORLD STRATEGY - v0.1 Game Engine
+   WORLD STRATEGY v0.1.1 - Game Engine
    ==================================== */
 
-// ==================== GAME CLASS ====================
 class GameEngine {
     constructor() {
-        // Canvas Setup
+        this.setupCanvas();
+        this.setupCamera();
+        this.setupInput();
+        this.setupGameState();
+        this.init();
+    }
+
+    // ==================== INITIALIZATION ====================
+    setupCanvas() {
         this.canvas = document.getElementById('game-canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - 70; // Adjust for top bar
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+    }
 
-        // Camera System
+    resizeCanvas() {
+        const rect = this.canvas.getBoundingClientRect();
+        this.canvas.width = rect.width * window.devicePixelRatio;
+        this.canvas.height = rect.height * window.devicePixelRatio;
+        this.ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    }
+
+    setupCamera() {
         this.camera = {
-            x: 0,
-            y: 0,
+            x: 2500,           // Start at middle of world
+            y: 2500,
             zoom: 1,
-            minZoom: 0.5,
-            maxZoom: 3
+            minZoom: 0.3,
+            maxZoom: 4,
+            targetZoom: 1,
+            zoomSpeed: 0.15    // Smooth zoom transition
         };
+    }
 
-        // Input System
+    setupInput() {
         this.input = {
             isDragging: false,
             dragStartX: 0,
             dragStartY: 0,
             lastX: 0,
-            lastY: 0
+            lastY: 0,
+            panSpeed: 1
         };
 
-        // Game State
+        // Mouse Events
+        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
+        this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
+        this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
+        this.canvas.addEventListener('wheel', (e) => this.onMouseWheel(e), { passive: false });
+        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    }
+
+    setupGameState() {
         this.gameState = {
             money: 50000,
             oil: 10000,
             population: 1000000
         };
 
-        // Performance Tracking
-        this.fps = 0;
-        this.frameCount = 0;
-        this.lastTime = Date.now();
-
-        // World Map Data
         this.world = {
             width: 5000,
             height: 5000,
             gridSize: 50
         };
 
-        // Initialize
-        this.init();
+        // Performance
+        this.fps = 0;
+        this.frameCount = 0;
+        this.lastTime = Date.now();
     }
 
-    // ==================== INITIALIZATION ====================
     init() {
-        console.log('🎮 WORLD STRATEGY Engine Initializing...');
-        
-        this.setupEventListeners();
+        console.log('🎮 WORLD STRATEGY v0.1.1 Engine Initializing...');
         this.setupMenuButtons();
         this.startGameLoop();
-        
         console.log('✅ Engine Ready!');
-    }
-
-    // ==================== EVENT LISTENERS ====================
-    setupEventListeners() {
-        // Mouse Events for Camera Control
-        this.canvas.addEventListener('mousedown', (e) => this.onMouseDown(e));
-        this.canvas.addEventListener('mousemove', (e) => this.onMouseMove(e));
-        this.canvas.addEventListener('mouseup', (e) => this.onMouseUp(e));
-        this.canvas.addEventListener('wheel', (e) => this.onMouseWheel(e), { passive: false });
-
-        // Window Resize
-        window.addEventListener('resize', () => this.onWindowResize());
-
-        // Prevent context menu
-        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     }
 
     setupMenuButtons() {
@@ -83,15 +87,14 @@ class GameEngine {
         buttons.forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const action = e.target.dataset.action;
-                console.log(`Menu Action: ${action}`);
+                console.log(`📌 Menu Action: ${action}`);
             });
         });
     }
 
     // ==================== INPUT HANDLING ====================
     onMouseDown(e) {
-        // Right click for camera drag
-        if (e.button === 2) {
+        if (e.button === 2) { // Right mouse button
             this.input.isDragging = true;
             this.input.dragStartX = e.clientX;
             this.input.dragStartY = e.clientY;
@@ -122,19 +125,14 @@ class GameEngine {
     onMouseWheel(e) {
         e.preventDefault();
 
-        const zoomSpeed = 0.1;
+        const zoomSpeed = 0.08;
         const direction = e.deltaY > 0 ? -1 : 1;
-        const newZoom = this.camera.zoom + direction * zoomSpeed;
+        this.camera.targetZoom += direction * zoomSpeed;
 
-        this.camera.zoom = Math.max(
+        this.camera.targetZoom = Math.max(
             this.camera.minZoom,
-            Math.min(this.camera.maxZoom, newZoom)
+            Math.min(this.camera.maxZoom, this.camera.targetZoom)
         );
-    }
-
-    onWindowResize() {
-        this.canvas.width = window.innerWidth;
-        this.canvas.height = window.innerHeight - 70;
     }
 
     // ==================== GAME LOOP ====================
@@ -160,6 +158,9 @@ class GameEngine {
             this.lastTime = now;
         }
 
+        // Smooth zoom transition
+        this.camera.zoom += (this.camera.targetZoom - this.camera.zoom) * this.camera.zoomSpeed;
+
         // Clamp camera position to world bounds
         this.camera.x = Math.max(0, Math.min(this.camera.x, this.world.width));
         this.camera.y = Math.max(0, Math.min(this.camera.y, this.world.height));
@@ -179,100 +180,117 @@ class GameEngine {
 
     // ==================== RENDER ====================
     render() {
-        // Clear canvas
-        this.ctx.fillStyle = '#0f0f0f';
-        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        // Clear canvas with background color
+        this.drawBackground();
 
-        // Save context
+        // Save context state
         this.ctx.save();
 
-        // Apply camera transformation
-        this.ctx.translate(this.canvas.width / 2, this.canvas.height / 2);
-        this.ctx.scale(this.camera.zoom, this.camera.zoom);
-        this.ctx.translate(-this.camera.x - this.world.width / 2, -this.camera.y - this.world.height / 2);
+        // Get canvas dimensions
+        const width = this.canvas.width / window.devicePixelRatio;
+        const height = this.canvas.height / window.devicePixelRatio;
 
-        // Draw world
-        this.drawWorld();
+        // Apply camera transformation
+        this.ctx.translate(width / 2, height / 2);
+        this.ctx.scale(this.camera.zoom, this.camera.zoom);
+        this.ctx.translate(-this.camera.x, -this.camera.y);
+
+        // Draw world grid
+        this.drawGrid();
 
         // Restore context
         this.ctx.restore();
     }
 
-    // ==================== WORLD RENDERING ====================
-    drawWorld() {
-        // Draw background (Ocean)
-        this.ctx.fillStyle = '#1a4d7a';
-        this.ctx.fillRect(0, 0, this.world.width, this.world.height);
-
-        // Draw grid
-        this.drawGrid();
-
-        // Draw continents (placeholder)
-        this.drawContinents();
+    // ==================== DRAWING FUNCTIONS ====================
+    /**
+     * Draw background - fills entire screen
+     */
+    drawBackground() {
+        const width = this.canvas.width / window.devicePixelRatio;
+        const height = this.canvas.height / window.devicePixelRatio;
+        
+        this.ctx.fillStyle = '#0a2540';
+        this.ctx.fillRect(0, 0, width, height);
     }
 
+    /**
+     * Draw strategic grid that moves with camera
+     */
     drawGrid() {
-        this.ctx.strokeStyle = 'rgba(100, 150, 200, 0.2)';
+        // Calculate visible grid bounds
+        const gridSpacing = this.world.gridSize;
+        const startX = Math.floor(this.camera.x / gridSpacing) * gridSpacing;
+        const startY = Math.floor(this.camera.y / gridSpacing) * gridSpacing;
+
+        // Grid line styling
+        this.ctx.strokeStyle = 'rgba(0, 212, 255, 0.15)';
         this.ctx.lineWidth = 1;
 
-        // Vertical lines
-        for (let x = 0; x <= this.world.width; x += this.world.gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, 0);
-            this.ctx.lineTo(x, this.world.height);
-            this.ctx.stroke();
+        const width = this.canvas.width / window.devicePixelRatio / this.camera.zoom;
+        const height = this.canvas.height / window.devicePixelRatio / this.camera.zoom;
+
+        // Draw vertical grid lines
+        for (let x = startX; x < this.camera.x + width; x += gridSpacing) {
+            if (x >= 0 && x <= this.world.width) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, this.camera.y - height / 2);
+                this.ctx.lineTo(x, this.camera.y + height / 2);
+                this.ctx.stroke();
+            }
         }
 
-        // Horizontal lines
-        for (let y = 0; y <= this.world.height; y += this.world.gridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(0, y);
-            this.ctx.lineTo(this.world.width, y);
-            this.ctx.stroke();
+        // Draw horizontal grid lines
+        for (let y = startY; y < this.camera.y + height; y += gridSpacing) {
+            if (y >= 0 && y <= this.world.height) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(this.camera.x - width / 2, y);
+                this.ctx.lineTo(this.camera.x + width / 2, y);
+                this.ctx.stroke();
+            }
+        }
+
+        // Draw grid coordinate labels when zoomed in
+        if (this.camera.zoom >= 0.8) {
+            this.drawGridLabels(startX, startY, gridSpacing);
+        }
+
+        // Draw world border
+        this.drawWorldBorder();
+    }
+
+    /**
+     * Draw coordinate labels on grid
+     */
+    drawGridLabels(startX, startY, gridSpacing) {
+        this.ctx.fillStyle = 'rgba(0, 212, 255, 0.4)';
+        this.ctx.font = '10px monospace';
+        this.ctx.textAlign = 'left';
+
+        for (let x = startX; x <= this.camera.x + 2000; x += gridSpacing * 2) {
+            for (let y = startY; y <= this.camera.y + 2000; y += gridSpacing * 2) {
+                if (x >= 0 && x <= this.world.width && y >= 0 && y <= this.world.height) {
+                    const gridX = Math.floor(x / gridSpacing);
+                    const gridY = Math.floor(y / gridSpacing);
+                    this.ctx.fillText(`${gridX},${gridY}`, x + 3, y + 12);
+                }
+            }
         }
     }
 
-    drawContinents() {
-        // Continent 1 (North)
-        this.drawContinent(1000, 600, 600, 400, '#2d5016');
-
-        // Continent 2 (South)
-        this.drawContinent(2000, 2500, 700, 500, '#2d5016');
-
-        // Continent 3 (East)
-        this.drawContinent(3500, 1500, 500, 800, '#2d5016');
-
-        // Continent 4 (West)
-        this.drawContinent(600, 2000, 400, 600, '#2d5016');
-    }
-
-    drawContinent(x, y, width, height, color) {
-        // Main continent shape (simplified rectangle with rounded corners)
-        this.ctx.fillStyle = color;
-        this.ctx.beginPath();
-        this.ctx.roundRect(x, y, width, height, 50);
-        this.ctx.fill();
-
-        // Add border
-        this.ctx.strokeStyle = '#1a3d0a';
+    /**
+     * Draw world border
+     */
+    drawWorldBorder() {
+        this.ctx.strokeStyle = 'rgba(0, 212, 255, 0.5)';
         this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-
-        // Add some variation with internal shapes
-        this.ctx.fillStyle = '#3d6b1f';
-        this.ctx.beginPath();
-        this.ctx.arc(x + width / 3, y + height / 3, 80, 0, Math.PI * 2);
-        this.ctx.fill();
-
-        this.ctx.beginPath();
-        this.ctx.arc(x + (width * 2) / 3, y + (height * 2) / 3, 100, 0, Math.PI * 2);
-        this.ctx.fill();
+        this.ctx.strokeRect(0, 0, this.world.width, this.world.height);
     }
 }
 
-// ==================== INITIALIZE GAME ====================
-// Wait for DOM to load
+// ==================== START GAME ====================
 document.addEventListener('DOMContentLoaded', () => {
     const game = new GameEngine();
     window.game = game; // For debugging in console
+    console.log('💡 Tip: Use window.game to access the engine in console');
 });
