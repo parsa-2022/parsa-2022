@@ -1,0 +1,189 @@
+/* ====================================
+   WORLD STRATEGY - v0.1 Styles
+   ==================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    font-family: 'Arial', sans-serif;
+    background: #1a1a1a;
+    color: #fff;
+    overflow: hidden;
+}
+
+/* Game Container */
+#game-container {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: #0f0f0f;
+}
+
+/* ==================== TOP BAR ==================== */
+.top-bar {
+    height: 70px;
+    background: linear-gradient(180deg, #2a2a2a 0%, #1a1a1a 100%);
+    border-bottom: 2px solid #444;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 40px;
+    z-index: 100;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.game-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #00d4ff;
+    min-width: 200px;
+    text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+.resources {
+    display: flex;
+    gap: 40px;
+    flex: 1;
+}
+
+.resource {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 16px;
+}
+
+.resource .label {
+    color: #aaa;
+    font-weight: bold;
+}
+
+.resource .value {
+    color: #00d4ff;
+    font-weight: bold;
+    font-size: 18px;
+}
+
+/* ==================== SIDE MENU ==================== */
+.side-menu {
+    position: fixed;
+    left: 0;
+    top: 70px;
+    width: 180px;
+    height: calc(100vh - 70px);
+    background: linear-gradient(90deg, #2a2a2a 0%, #1a1a1a 100%);
+    border-right: 2px solid #444;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    z-index: 99;
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.5);
+}
+
+.menu-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #00d4ff;
+    border-bottom: 2px solid #444;
+    padding-bottom: 10px;
+    text-align: center;
+}
+
+.menu-btn {
+    padding: 12px 15px;
+    background: #333;
+    border: 2px solid #555;
+    color: #00d4ff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.menu-btn:hover {
+    background: #00d4ff;
+    color: #1a1a1a;
+    border-color: #00d4ff;
+    transform: translateX(5px);
+}
+
+.menu-btn:active {
+    transform: translateX(3px);
+}
+
+/* ==================== CANVAS ==================== */
+#game-canvas {
+    flex: 1;
+    display: block;
+    background: #0f0f0f;
+    cursor: grab;
+}
+
+#game-canvas:active {
+    cursor: grabbing;
+}
+
+/* ==================== DEBUG INFO ==================== */
+.debug-info {
+    position: fixed;
+    bottom: 20px;
+    left: 200px;
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid #444;
+    padding: 10px 15px;
+    font-size: 12px;
+    color: #00d4ff;
+    border-radius: 5px;
+    font-family: 'Courier New', monospace;
+    z-index: 98;
+}
+
+#debug-text {
+    white-space: nowrap;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 800px) {
+    .top-bar {
+        flex-direction: column;
+        height: auto;
+        gap: 10px;
+        padding: 10px;
+    }
+
+    .resources {
+        width: 100%;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .game-title {
+        font-size: 18px;
+    }
+
+    .side-menu {
+        width: 100px;
+        padding: 10px;
+    }
+
+    .menu-btn {
+        font-size: 12px;
+        padding: 8px 10px;
+    }
+
+    .debug-info {
+        left: 120px;
+        bottom: 10px;
+        font-size: 10px;
+    }
+}
