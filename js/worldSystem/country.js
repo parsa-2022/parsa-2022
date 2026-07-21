@@ -13,7 +13,6 @@ class Country {
         
         // Cache for coordinate conversion
         this._bounds = null;
-        this._path2D = null;
     }
 
     /**
@@ -54,17 +53,37 @@ class Country {
     }
 
     /**
-     * Check if point is inside country
+     * Check if point is inside country using ray casting algorithm
      */
-    containsPoint(x, y) {
-        if (!this._path2D) {
-            return false; // Path not ready
-        }
+    containsPoint(x, y, worldBounds, canvasWidth, canvasHeight) {
+        if (!this.geometry) return false;
 
-        // Use canvas API to test point in path
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        return ctx.isPointInPath(this._path2D, x, y);
+        const type = this.geometry.type;
+        const polygons = type === 'Polygon' 
+            ? [this.geometry.coordinates[0]] 
+            : this.geometry.coordinates.map(p => p[0]);
+
+        for (let polygon of polygons) {
+            if (this._pointInPolygon(x, y, polygon, worldBounds, canvasWidth, canvasHeight)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ray casting algorithm for point-in-polygon test
+     */
+    _pointInPolygon(x, y, polygon, worldBounds, canvasWidth, canvasHeight) {
+        let inside = false;
+        for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+            const { x: xi, y: yi } = this.geoToCanvas(polygon[i][0], polygon[i][1], worldBounds, canvasWidth, canvasHeight);
+            const { x: xj, y: yj } = this.geoToCanvas(polygon[j][0], polygon[j][1], worldBounds, canvasWidth, canvasHeight);
+
+            const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
+            if (intersect) inside = !inside;
+        }
+        return inside;
     }
 
     /**
