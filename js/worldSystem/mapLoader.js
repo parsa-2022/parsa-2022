@@ -1,4 +1,4 @@
-/* ===================================="
+/* ====================================
    WORLD STRATEGY v0.2 - Map Loader
    ==================================== */
 
@@ -13,14 +13,38 @@ class MapLoader {
      */
     async load() {
         try {
+            console.log('🔄 Loading GeoJSON from assets/maps/countries.geojson...');
             const response = await fetch('assets/maps/countries.geojson');
             if (!response.ok) {
                 throw new Error(`Failed to load GeoJSON: ${response.status}`);
             }
             this.geoJsonData = await response.json();
+            console.log('✅ GeoJSON loaded successfully');
+            console.log('📊 Number of GeoJSON features: ' + this.geoJsonData.features.length);
+            
+            if (this.geoJsonData.features.length > 0) {
+                const firstFeature = this.geoJsonData.features[0];
+                console.log('📍 First feature geometry type: ' + firstFeature.geometry.type);
+                console.log('📛 First feature name: ' + (firstFeature.properties?.name || 'Unknown'));
+                
+                if (firstFeature.geometry.type === 'Polygon') {
+                    const coords = firstFeature.geometry.coordinates[0];
+                    console.log('🔢 First five coordinates of first polygon:');
+                    for (let i = 0; i < Math.min(5, coords.length); i++) {
+                        console.log('   [' + i + ']: [' + coords[i][0] + ', ' + coords[i][1] + ']');
+                    }
+                } else if (firstFeature.geometry.type === 'MultiPolygon') {
+                    const coords = firstFeature.geometry.coordinates[0][0];
+                    console.log('🔢 First five coordinates of first polygon (MultiPolygon):');
+                    for (let i = 0; i < Math.min(5, coords.length); i++) {
+                        console.log('   [' + i + ']: [' + coords[i][0] + ', ' + coords[i][1] + ']');
+                    }
+                }
+            }
+            
             this.validateGeoJSON();
             this.parseFeatures();
-            console.log(`✅ Loaded ${this.countries.length} countries`);
+            console.log('✅ Total countries parsed: ' + this.countries.length);
             return this.countries;
         } catch (error) {
             console.error('❌ Map loading failed:', error);

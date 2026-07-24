@@ -1,4 +1,4 @@
-/* ===================================="
+/* ====================================
    WORLD STRATEGY v0.2 - Geo Renderer
    ==================================== */
 
@@ -7,6 +7,8 @@ class GeoRenderer {
         this.countries = [];
         this.worldBounds = null;
         this.selectedCountry = null;
+        this.frameDrawCount = 0;
+        this.lastLoggedFrame = -1;
     }
 
     /**
@@ -17,7 +19,7 @@ class GeoRenderer {
         
         // Calculate world bounds from all countries
         this.calculateWorldBounds();
-        console.log('🗺️ Geo Renderer initialized with ' + countries.length + ' countries');
+        console.log('🗺️ Geo Renderer initialized');
     }
 
     /**
@@ -46,7 +48,11 @@ class GeoRenderer {
             height: maxLat - minLat
         };
 
-        console.log('📍 World bounds: Lon [' + minLon.toFixed(2) + ', ' + maxLon.toFixed(2) + '], Lat [' + minLat.toFixed(2) + ', ' + maxLat.toFixed(2) + ']');
+        console.log(`📍 World bounds calculated:`);
+        console.log(`   minLon: ${this.worldBounds.minLon}`);
+        console.log(`   maxLon: ${this.worldBounds.maxLon}`);
+        console.log(`   minLat: ${this.worldBounds.minLat}`);
+        console.log(`   maxLat: ${this.worldBounds.maxLat}`);
     }
 
     /**
@@ -58,21 +64,33 @@ class GeoRenderer {
 
     /**
      * Draw all countries (country polygons)
-     * Countries are drawn directly with their geo coordinates
-     * The camera transformation handles the projection
      */
-    drawCountries(ctx) {
-        if (!this.worldBounds) return;
+    drawCountries(ctx, canvasWidth, canvasHeight) {
+        if (!this.worldBounds) {
+            console.warn('⚠️ drawCountries called but worldBounds is null');
+            return;
+        }
 
+        this.frameDrawCount = 0;
         this.countries.forEach(country => {
-            country.draw(ctx);
+            if (country.geometry) {
+                this.frameDrawCount++;
+            }
+            country.draw(ctx, this.worldBounds, canvasWidth, canvasHeight);
         });
+        
+        // Log every 60 frames (approximately 1 second at 60fps)
+        if (this.lastLoggedFrame === -1 || Date.now() - this.lastLogTime > 1000) {
+            console.log(`✅ drawCountries() called. Drawing ${this.frameDrawCount} countries`);
+            this.lastLoggedFrame = 0;
+            this.lastLogTime = Date.now();
+        }
     }
 
     /**
      * Draw country borders (already done in drawCountries with strokeStyle)
      */
-    drawBorders(ctx) {
+    drawBorders(ctx, canvasWidth, canvasHeight) {
         // Borders are drawn as part of drawCountries
         // This method exists for clarity in the rendering pipeline
     }
@@ -80,7 +98,7 @@ class GeoRenderer {
     /**
      * Highlight selected country
      */
-    highlightSelected(ctx) {
+    highlightSelected(ctx, canvasWidth, canvasHeight) {
         if (this.selectedCountry) {
             // Already drawn with selection styling in drawCountries
         }
@@ -100,7 +118,7 @@ class GeoRenderer {
             if (country.containsPoint(x, y)) {
                 country.setSelected(true);
                 this.selectedCountry = country;
-                console.log('✅ Selected: ' + country.getDisplayName());
+                console.log(`✅ Selected: ${country.getDisplayName()}`);
                 return country;
             }
         }
