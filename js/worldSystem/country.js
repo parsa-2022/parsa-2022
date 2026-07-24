@@ -1,4 +1,4 @@
-/* ====================================
+/* ===================================="
    WORLD STRATEGY v0.2 - Country Object
    ==================================== */
 
@@ -42,20 +42,19 @@ class Country {
     }
 
     /**
-     * Convert geographic coordinates to canvas coordinates
-     * Longitude (x) -> left to right
-     * Latitude (y) -> top to bottom (inverted)
+     * Convert geographic coordinates to world coordinates (in geo space -180 to 180, -90 to 90)
+     * Longitude (x) stays as is: -180 to 180
+     * Latitude (y) is inverted: 90 to -90 (top to bottom in canvas)
      */
-    geoToCanvas(lon, lat, worldBounds, canvasWidth, canvasHeight) {
-        const x = ((lon - worldBounds.minLon) / worldBounds.width) * canvasWidth;
-        const y = ((worldBounds.maxLat - lat) / worldBounds.height) * canvasHeight;
-        return { x, y };
+    geoToWorld(lon, lat) {
+        // Return geo coordinates directly - camera will handle projection
+        return { x: lon, y: lat };
     }
 
     /**
      * Check if point is inside country using ray casting algorithm
      */
-    containsPoint(x, y, worldBounds, canvasWidth, canvasHeight) {
+    containsPoint(x, y) {
         if (!this.geometry) return false;
 
         const type = this.geometry.type;
@@ -64,7 +63,7 @@ class Country {
             : this.geometry.coordinates.map(p => p[0]);
 
         for (let polygon of polygons) {
-            if (this._pointInPolygon(x, y, polygon, worldBounds, canvasWidth, canvasHeight)) {
+            if (this._pointInPolygon(x, y, polygon)) {
                 return true;
             }
         }
@@ -74,11 +73,13 @@ class Country {
     /**
      * Ray casting algorithm for point-in-polygon test
      */
-    _pointInPolygon(x, y, polygon, worldBounds, canvasWidth, canvasHeight) {
+    _pointInPolygon(x, y, polygon) {
         let inside = false;
         for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-            const { x: xi, y: yi } = this.geoToCanvas(polygon[i][0], polygon[i][1], worldBounds, canvasWidth, canvasHeight);
-            const { x: xj, y: yj } = this.geoToCanvas(polygon[j][0], polygon[j][1], worldBounds, canvasWidth, canvasHeight);
+            const xi = polygon[i][0];
+            const yi = polygon[i][1];
+            const xj = polygon[j][0];
+            const yj = polygon[j][1];
 
             const intersect = ((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi);
             if (intersect) inside = !inside;
@@ -89,16 +90,16 @@ class Country {
     /**
      * Draw country on canvas
      */
-    draw(ctx, worldBounds, canvasWidth, canvasHeight) {
+    draw(ctx) {
         if (!this.geometry) return;
 
         const type = this.geometry.type;
 
         if (type === 'Polygon') {
-            this._drawPolygon(ctx, this.geometry.coordinates[0], worldBounds, canvasWidth, canvasHeight);
+            this._drawPolygon(ctx, this.geometry.coordinates[0]);
         } else if (type === 'MultiPolygon') {
             this.geometry.coordinates.forEach(polygon => {
-                this._drawPolygon(ctx, polygon[0], worldBounds, canvasWidth, canvasHeight);
+                this._drawPolygon(ctx, polygon[0]);
             });
         }
     }
@@ -106,13 +107,14 @@ class Country {
     /**
      * Draw a single polygon
      */
-    _drawPolygon(ctx, coordinates, worldBounds, canvasWidth, canvasHeight) {
+    _drawPolygon(ctx, coordinates) {
         if (!coordinates || coordinates.length === 0) return;
 
         ctx.beginPath();
 
         coordinates.forEach((coord, index) => {
-            const { x, y } = this.geoToCanvas(coord[0], coord[1], worldBounds, canvasWidth, canvasHeight);
+            const x = coord[0];
+            const y = coord[1];
 
             if (index === 0) {
                 ctx.moveTo(x, y);

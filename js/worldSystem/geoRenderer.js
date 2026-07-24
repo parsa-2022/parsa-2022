@@ -1,4 +1,4 @@
-/* ====================================
+/* ===================================="
    WORLD STRATEGY v0.2 - Geo Renderer
    ==================================== */
 
@@ -17,7 +17,7 @@ class GeoRenderer {
         
         // Calculate world bounds from all countries
         this.calculateWorldBounds();
-        console.log('🗺️ Geo Renderer initialized');
+        console.log('🗺️ Geo Renderer initialized with ' + countries.length + ' countries');
     }
 
     /**
@@ -46,7 +46,7 @@ class GeoRenderer {
             height: maxLat - minLat
         };
 
-        console.log(`📍 World bounds: Lon [${minLon}, ${maxLon}], Lat [${minLat}, ${maxLat}]`);
+        console.log('📍 World bounds: Lon [' + minLon.toFixed(2) + ', ' + maxLon.toFixed(2) + '], Lat [' + minLat.toFixed(2) + ', ' + maxLat.toFixed(2) + ']');
     }
 
     /**
@@ -58,19 +58,21 @@ class GeoRenderer {
 
     /**
      * Draw all countries (country polygons)
+     * Countries are drawn directly with their geo coordinates
+     * The camera transformation handles the projection
      */
-    drawCountries(ctx, canvasWidth, canvasHeight) {
+    drawCountries(ctx) {
         if (!this.worldBounds) return;
 
         this.countries.forEach(country => {
-            country.draw(ctx, this.worldBounds, canvasWidth, canvasHeight);
+            country.draw(ctx);
         });
     }
 
     /**
      * Draw country borders (already done in drawCountries with strokeStyle)
      */
-    drawBorders(ctx, canvasWidth, canvasHeight) {
+    drawBorders(ctx) {
         // Borders are drawn as part of drawCountries
         // This method exists for clarity in the rendering pipeline
     }
@@ -78,7 +80,7 @@ class GeoRenderer {
     /**
      * Highlight selected country
      */
-    highlightSelected(ctx, canvasWidth, canvasHeight) {
+    highlightSelected(ctx) {
         if (this.selectedCountry) {
             // Already drawn with selection styling in drawCountries
         }
@@ -98,7 +100,7 @@ class GeoRenderer {
             if (country.containsPoint(x, y)) {
                 country.setSelected(true);
                 this.selectedCountry = country;
-                console.log(`✅ Selected: ${country.getDisplayName()}`);
+                console.log('✅ Selected: ' + country.getDisplayName());
                 return country;
             }
         }
