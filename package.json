@@ -1,0 +1,19 @@
+{
+  "name": "world-strategy",
+  "version": "0.2.0",
+  "description": "A web-based strategy game with real world map from GeoJSON",
+  "main": "game.js",
+  "scripts": {
+    "start": "npx http-server -p 8080 -c-1",
+    "dev": "npx http-server -p 8080 -c-1 -o",
+    "serve": "python3 -m http.server 8080 || python -m http.server 8080"
+  },
+  "keywords": [
+    "game",
+    "strategy",
+    "world",
+    "geojson"
+  ],
+  "author": "",
+  "license": "MIT"
+}
